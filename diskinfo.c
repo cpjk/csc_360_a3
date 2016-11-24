@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
  /* diskinfo */
 
@@ -12,20 +14,35 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-
   FILE *fp;
+  int fd;
+  void *disk;
+  struct stat sb;
+
   fp = fopen(argv[1], "r"); // open disk file
 
  /* get disk size */
   unsigned long disk_size = file_size(fp);
-  void *mmap = mmap()
+  fclose(fp); // close the disk file
 
+  fd = open(argv[1], O_RDONLY);
 
+  if(fd == -1) {
+    perror("open");
+    return 1;
+  }
+
+  if(fstat(fd, &sb) == -1) {
+    perror("fstat");
+    return 1;
+  }
+
+  disk = mmap(0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
 
 
   printf("Total size of the disk: %lu bytes.\n", disk_size);
+  printf("Total size of the disk: %lu bytes.\n", sb.st_size);
 
-  fclose(fp); // close the disk file
 }
 
 unsigned long file_size(FILE *fp) {
