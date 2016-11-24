@@ -1,6 +1,22 @@
+#include <stdio.h>
+#include <stdlib.h>
  /* diskinfo */
 
- /* open disk file */
+int main(int argc, char **argv) {
+  if(!argv[1]) {
+    printf("No file argument provided. Exiting.\n");
+    exit(-1);
+  }
+
+
+  FILE *fp;
+  fp = fopen(argv[1], "r"); // open disk file
+
+
+  fclose(fp); // close the disk file
+}
+
+
  /* get disk size */
  /* char *mmap = mmap(disk file, ... disk size); */
 
@@ -17,12 +33,12 @@
  /* get disk size */
  /* char *mmap = mmap(disk file, ... disk size); */
 
- while(mmap[root dir] != 0) {
-         // check attributes for 'D' or 'F'
-          //   get time&date(handle little endian), and print accordingly
+ /* while(mmap[root dir] != 0) { */
+ /*         // check attributes for 'D' or 'F' */
+ /*          //   get time&date(handle little endian), and print accordingly */
 
-   root dir += offset(32 bytes); //next entry
- }
+ /*   root dir += offset(32 bytes); //next entry */
+ /* } */
 
 // munmap(disk file)
 // close disk file
@@ -33,9 +49,9 @@
 //  get disk size
 // char *src = mmap(disk file, ... disk size)
 
-  check for file to be copied in disk root dir, grab its file size & related info
-  open a file in current directory with same size
-char *dest = mmap(new file, ... file size)
+//  check for file to be copied in disk root dir, grab its file size & related info
+//  open a file in current directory with same size
+// char *dest = mmap(new file, ... file size)
 /* copy file from src->dest, reading sector by sector */
 
 /* munmap(disk file) */
