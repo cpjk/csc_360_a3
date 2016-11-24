@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+
  /* diskinfo */
+
+unsigned long file_size(FILE *fp);
 
 int main(int argc, char **argv) {
   if(!argv[1]) {
@@ -12,12 +16,27 @@ int main(int argc, char **argv) {
   FILE *fp;
   fp = fopen(argv[1], "r"); // open disk file
 
+ /* get disk size */
+  unsigned long disk_size = file_size(fp);
+  void *mmap = mmap()
+
+
+
+
+  printf("Total size of the disk: %lu bytes.\n", disk_size);
 
   fclose(fp); // close the disk file
 }
 
+unsigned long file_size(FILE *fp) {
+  fseek(fp, 0L, SEEK_END); // set position indicator to end of file
+  long size = ftell(fp);
+  fseek(fp, 0L, SEEK_SET); // reset position indicator
 
- /* get disk size */
+  return size;
+}
+
+
  /* char *mmap = mmap(disk file, ... disk size); */
 
  /* Free size of disk: check FAT table */
@@ -26,6 +45,7 @@ int main(int argc, char **argv) {
 
  /* munmap(disk file) */
  /* close disk file */
+
 
  // disklist
 
