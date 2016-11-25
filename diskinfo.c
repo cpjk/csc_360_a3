@@ -8,6 +8,8 @@
 
 unsigned long file_size(FILE *fp);
 unsigned int sec_per_fat(char *disk);
+unsigned int fat1_start_byte(char *disk);
+unsigned int num_fats(char *disk);
 
 /* const unsigned int ROOT_DIR_START_BYTE = 9728; */
 /* const unsigned int FAT1_START_BYTE = 512; */
@@ -17,10 +19,10 @@ unsigned int reserved_sec_cnt(char *disk) {
   return (unsigned int) disk[0x0e] | (disk[0x0f] << 8);
 }
 
-/* unsigned int root_dir_start_byte(char *disk) { */
-/*   // Address of first FAT + Number of FATs * Sectors per FAT */
-/*   return (unsigned int) fat1_start_byte(disk) + ; */
-/* } */
+unsigned int root_dir_start_byte(char *disk) {
+  // Address of first FAT + Number of FATs * Sectors per FAT
+  return (unsigned int) fat1_start_byte(disk) + num_fats(disk) * sec_per_fat(disk) * BYTES_PER_SEC;
+}
 
 unsigned int sec_per_fat(char *disk) {
   return (unsigned int) ((disk[0x17] << 8) | disk[0x16]);
@@ -70,6 +72,7 @@ int main(int argc, char **argv) {
   unsigned int res_sec_cnt = reserved_sec_cnt(disk);
   printf("reserved sector count: %d\n", res_sec_cnt);
   printf("fat1 start byte: %d\n", fat1_start_byte(disk));
+  printf("rootdir start byte: %d\n", root_dir_start_byte(disk));
 
   printf("================\n");
   printf("OS Name: %s\n", sysname);
