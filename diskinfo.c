@@ -7,6 +7,7 @@
 #include <string.h>
 
 unsigned long file_size(FILE *fp);
+unsigned int sec_per_fat(char *disk);
 
 /* const unsigned int ROOT_DIR_START_BYTE = 9728; */
 /* const unsigned int FAT1_START_BYTE = 512; */
@@ -16,10 +17,26 @@ unsigned int reserved_sec_cnt(char *disk) {
   return (unsigned int) disk[0x0e] | (disk[0x0f] << 8);
 }
 
+/* unsigned int root_dir_start_byte(char *disk) { */
+/*   // Address of first FAT + Number of FATs * Sectors per FAT */
+/*   return (unsigned int) fat1_start_byte(disk) + ; */
+/* } */
+
+unsigned int sec_per_fat(char *disk) {
+  return (unsigned int) ((disk[0x17] << 8) | disk[0x16]);
+}
 
 unsigned int fat1_start_byte(char *disk) {
-//Start sector for partition 1 + Reserved sector count) * Bytes per sector
+  //Start sector for partition 1 + Reserved sector count) * Bytes per sector
   return (unsigned int) reserved_sec_cnt(disk) * BYTES_PER_SEC;
+}
+
+unsigned int num_fats(char *disk) {
+  return (unsigned int) disk[0x10];
+}
+
+unsigned int num_files_root_dir(char *disk) {
+  // count files
 }
 
 int main(int argc, char **argv) {
@@ -50,8 +67,6 @@ int main(int argc, char **argv) {
 
   strncpy(sysname, &disk[0x03], 8);
 
-  int num_fats = disk[0x10];
-  int sectors_per_fat = (disk[0x17] << 8) | disk[0x16];
   unsigned int res_sec_cnt = reserved_sec_cnt(disk);
   printf("reserved sector count: %d\n", res_sec_cnt);
   printf("fat1 start byte: %d\n", fat1_start_byte(disk));
@@ -64,8 +79,8 @@ int main(int argc, char **argv) {
   printf("================\n");
   printf("Number of files in the root directory (not including subdirectories): TODO\n");
   printf("================\n");
-  printf("Number of FAT copies: %d\n", num_fats);
-  printf("Sectors per FAT: %d\n", sectors_per_fat);
+  printf("Number of FAT copies: %d\n", num_fats(disk));
+  printf("Sectors per FAT: %d\n", sec_per_fat(disk));
  /* Free size of disk: check FAT table */
 
  /* number of files in root dir: check root directory */
