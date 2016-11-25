@@ -10,6 +10,8 @@ unsigned long file_size(FILE *fp);
 unsigned int sec_per_fat(char *disk);
 unsigned int fat1_start_byte(char *disk);
 unsigned int num_fats(char *disk);
+unsigned int num_files_root_dir(char *disk);
+unsigned int reserved_sec_cnt(char *disk);
 
 const unsigned int BYTES_PER_SEC = 512;
 // root dir size: 14 sectors * 16 entries / sec = 224 max entries
@@ -37,6 +39,28 @@ unsigned int num_fats(char *disk) {
   return (unsigned int) disk[0x10];
 }
 
+void get_volume_label(char *disk, char *buffer) {
+  unsigned int start_byte = root_dir_start_byte(disk);
+
+  int ent = 0;
+  for(ent; ent < ROOT_DIR_MAX_ENT; ent++) {
+    unsigned int entry_start_byte = start_byte + (32 * ent); // 32 bytes per entry
+    unsigned int attr_byte = entry_start_byte + 0x0b;
+    if(disk[attr_byte] == 0x0f) { continue; } // long file name entry (fake entry)
+    if(disk[entry_start_byte] == 0x00) { return; } // free entry and rest are free
+    if(disk[entry_start_byte] == 0xe5) { continue; } // free entry
+    if(disk[entry_start_byte] == 0x2e) { continue; } // dot directory
+    if((disk[attr_byte] & 0x08) != 0) { // volume label
+      int i;
+      for(i = 0; i < 8; i++) {
+        buffer[i] = disk[entry_start_byte + i];
+      }
+      return;
+    }
+  }
+  return;
+}
+
 // worry about hidden files?
 unsigned int num_files_root_dir(char *disk) {
   unsigned int start_byte = root_dir_start_byte(disk);
@@ -54,7 +78,6 @@ unsigned int num_files_root_dir(char *disk) {
 
     if((disk[attr_byte] & 0x10) == 0) { num_files++; } // not subdirectory (actual file)
   }
-
 
   return num_files;
 }
@@ -87,6 +110,10 @@ int main(int argc, char **argv) {
 
   strncpy(sysname, &disk[0x03], 8);
 
+  char volume_label[9];
+  volume_label[8] = '\0';
+  get_volume_label(disk, volume_label);
+
   unsigned int res_sec_cnt = reserved_sec_cnt(disk);
   printf("reserved sector count: %d\n", res_sec_cnt);
   printf("fat1 start byte: %d\n", fat1_start_byte(disk));
@@ -94,7 +121,7 @@ int main(int argc, char **argv) {
 
   printf("================\n");
   printf("OS Name: %s\n", sysname);
-  printf("Label of disk: TODO\n");
+  printf("Label of disk: %s\n", volume_label);
   printf("Total size of the disk: %lu bytes.\n", disk_size);
   printf("Free size of disk: TODO\n");
   printf("================\n");
