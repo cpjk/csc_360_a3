@@ -11,9 +11,9 @@ unsigned int sec_per_fat(char *disk);
 unsigned int fat1_start_byte(char *disk);
 unsigned int num_fats(char *disk);
 
-/* const unsigned int ROOT_DIR_START_BYTE = 9728; */
-/* const unsigned int FAT1_START_BYTE = 512; */
 const unsigned int BYTES_PER_SEC = 512;
+// root dir size: 14 sectors * 16 entries / sec = 224 max entries
+const unsigned int ROOT_DIR_MAX_ENT = 224;
 
 unsigned int reserved_sec_cnt(char *disk) {
   return (unsigned int) disk[0x0e] | (disk[0x0f] << 8);
@@ -37,8 +37,26 @@ unsigned int num_fats(char *disk) {
   return (unsigned int) disk[0x10];
 }
 
+// worry about hidden files?
 unsigned int num_files_root_dir(char *disk) {
-  // count files
+  unsigned int start_byte = root_dir_start_byte(disk);
+  unsigned int num_files = 0;
+
+  int ent = 0;
+  for(ent; ent < ROOT_DIR_MAX_ENT; ent++) {
+    unsigned int entry_start_byte = start_byte + (32 * ent); // 32 bytes per entry
+    unsigned int attr_byte = entry_start_byte + 0x0b;
+    if(disk[attr_byte] == 0x0f) { continue; } // long file name entry (fake entry)
+    if(disk[entry_start_byte] == 0x00) { return num_files; } // free entry and rest are free
+    if(disk[entry_start_byte] == 0xe5) { continue; } // free entry
+    if(disk[entry_start_byte] == 0x2e) { continue; } // dot directory
+    if((disk[attr_byte] & 0x08) != 0) { continue; } // volume label
+
+    if((disk[attr_byte] & 0x10) == 0) { num_files++; } // not subdirectory (actual file)
+  }
+
+
+  return num_files;
 }
 
 int main(int argc, char **argv) {
@@ -80,7 +98,8 @@ int main(int argc, char **argv) {
   printf("Total size of the disk: %lu bytes.\n", disk_size);
   printf("Free size of disk: TODO\n");
   printf("================\n");
-  printf("Number of files in the root directory (not including subdirectories): TODO\n");
+  printf("Number of files in the root directory (not including subdirectories): %d\n",
+      num_files_root_dir(disk));
   printf("================\n");
   printf("Number of FAT copies: %d\n", num_fats(disk));
   printf("Sectors per FAT: %d\n", sec_per_fat(disk));
