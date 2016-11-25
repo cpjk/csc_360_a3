@@ -8,12 +8,18 @@
 
 unsigned long file_size(FILE *fp);
 
-const unsigned int ROOT_DIR_START_BYTE = 9728;
-const unsigned int FAT1_START_BYTE = 512;
-const unsigned int BYTES_PER_SECTOR = 512;
+/* const unsigned int ROOT_DIR_START_BYTE = 9728; */
+/* const unsigned int FAT1_START_BYTE = 512; */
+const unsigned int BYTES_PER_SEC = 512;
 
 unsigned int reserved_sec_cnt(char *disk) {
   return (unsigned int) disk[0x0e] | (disk[0x0f] << 8);
+}
+
+
+unsigned int fat1_start_byte(char *disk) {
+//Start sector for partition 1 + Reserved sector count) * Bytes per sector
+  return (unsigned int) reserved_sec_cnt(disk) * BYTES_PER_SEC;
 }
 
 int main(int argc, char **argv) {
@@ -48,7 +54,9 @@ int main(int argc, char **argv) {
   int sectors_per_fat = (disk[0x17] << 8) | disk[0x16];
   unsigned int res_sec_cnt = reserved_sec_cnt(disk);
   printf("reserved sector count: %d\n", res_sec_cnt);
+  printf("fat1 start byte: %d\n", fat1_start_byte(disk));
 
+  printf("================\n");
   printf("OS Name: %s\n", sysname);
   printf("Label of disk: TODO\n");
   printf("Total size of the disk: %lu bytes.\n", disk_size);
