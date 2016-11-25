@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <fcntl.h>
-
- /* diskinfo */
+#include <string.h>
 
 unsigned long file_size(FILE *fp);
 
@@ -16,32 +16,41 @@ int main(int argc, char **argv) {
 
   FILE *fp;
   int fd;
-  void *disk;
+  char *disk;
   struct stat sb;
 
   fp = fopen(argv[1], "r"); // open disk file
-
- /* get disk size */
-  unsigned long disk_size = file_size(fp);
+  unsigned long disk_size = file_size(fp); /* get disk size */
   fclose(fp); // close the disk file
 
-  fd = open(argv[1], O_RDONLY);
+  fd = open(argv[1], O_RDONLY); // get a file descriptor for the disk
+  if(fd == -1) { perror("open"); return 1; }
+  if(fstat(fd, &sb) == -1) { perror("fstat"); return 1; }
 
-  if(fd == -1) {
-    perror("open");
-    return 1;
-  }
+  disk = (char *) mmap(0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0); // mmap the disk to memory
+  if (disk == MAP_FAILED) { perror ("mmap"); return 1; }
+  if (close (fd) == -1) { perror ("close"); return 1; }
 
-  if(fstat(fd, &sb) == -1) {
-    perror("fstat");
-    return 1;
-  }
+  char *sysname = malloc(9*sizeof(char));  // get OS name
+  sysname[8] = '\0';
 
-  disk = mmap(0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
+  strncpy(sysname, &disk[0x03], 8);
 
+  int num_fats = disk[0x10];
+  int sectors_per_fat = (disk[0x17] << 8) | disk[0x16];
 
+  printf("OS Name: %s\n", sysname);
+  printf("Label of disk: TODO\n");
   printf("Total size of the disk: %lu bytes.\n", disk_size);
-  printf("Total size of the disk: %lu bytes.\n", sb.st_size);
+  printf("Free size of disk: TODO\n");
+  printf("================\n");
+  printf("Number of files in the root directory (not including subdirectories): TODO\n");
+  printf("================\n");
+  printf("Number of FAT copies: %d\n", num_fats);
+  printf("Sectors per FAT: %d\n", sectors_per_fat);
+ /* Free size of disk: check FAT table */
+
+ /* number of files in root dir: check root directory */
 
 }
 
@@ -53,11 +62,13 @@ unsigned long file_size(FILE *fp) {
   return size;
 }
 
+unsigned long free_disk_size(void *disk) {
+
+}
+
 
  /* char *mmap = mmap(disk file, ... disk size); */
 
- /* Free size of disk: check FAT table */
- /* number of files in root dir: check root directory */
  /* other variables: check boot sector */
 
  /* munmap(disk file) */
