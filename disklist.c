@@ -1,4 +1,4 @@
-#include "diskinfo.h"
+#include "utils.h"
 
 int main(int argc, char **argv) {
   if(!argv[1]) {

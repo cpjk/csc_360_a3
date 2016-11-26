@@ -20,3 +20,5 @@ unsigned long disk_size(char *diskname);
 unsigned long file_size(FILE *fp);
 unsigned int root_dir_sectors();
 unsigned long data_size_bytes(char *disk, unsigned long disk_size_bytes);
+unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes);
+unsigned int total_sec(char *disk);
