@@ -1,9 +1,5 @@
 #include "utils.h"
 
-const unsigned int BYTES_PER_SEC = 512; // equals bytes per cluster
-const unsigned int ROOT_DIR_MAX_ENT = 224;// rootdir size: 14 sec*16 entries/sec = 224 max entries
-const float BYTES_PER_FAT_ENT = 1.5;
-
 unsigned int root_dir_bytes() {
   return 32 * ROOT_DIR_MAX_ENT;
 }
