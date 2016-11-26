@@ -48,6 +48,9 @@ unsigned long data_size_bytes(char *disk) {
 }
 
 unsigned int data_start_byte(char *disk) {
+/* fat12.data_start_addr = fat12.root_dir_sector*fat12.bytes_per_sector + */
+/* fat12.max_root_dir_entries*32; */
+
   //   Address of data region: Address of root directory + Maximum number
   //   of root directory entries * 32
   return root_dir_start_byte(disk) + root_dir_bytes();
@@ -69,7 +72,7 @@ unsigned int sec_per_fat(char *disk) {
 //read 3 bytes block at a time. 2 entries per block
 unsigned int free_disk_size(char *disk) {
   int num_free_clust = 0;
-  int in_use_clust = 0;
+  int in_use_clust = 0;// 2 clusters
 
   /* int bytes_in_fat = sec_per_fat(disk) * BYTES_PER_SEC; */
   /* printf("num bytes in fat: %d\n", bytes_in_fat); */
@@ -122,7 +125,8 @@ unsigned int free_disk_size(char *disk) {
   }
 
   printf("bytes in use: %d\n", in_use_clust * 512);
-  return num_free_clust * 512;
+  return disk_size - (in_use_clust * 512); // 1024 bytes too much free space reported. 2 sectors more are used
+  /* return num_free_clust * 512; */
 }
 
 unsigned int fat1_start_byte(char *disk) {
