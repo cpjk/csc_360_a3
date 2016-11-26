@@ -72,14 +72,6 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
   int num_free_clust = 0;
   int in_use_clust = 0;// 2 clusters
 
-  /* int bytes_in_fat = sec_per_fat(disk) * BYTES_PER_SEC; */
-  /* printf("num bytes in fat: %d\n", bytes_in_fat); */
-
-  /* int blocks_in_fat = bytes_in_fat / 3; // 3 bytes per block read */
-
-  /* int entries_in_fat = blocks_in_fat * 2; // 3 bytes per entry // WRONG! */
-  /* printf("num entries in fat: %d\n", entries_in_fat); */
-
   int entries_to_read = data_size_bytes(disk, disk_size_bytes) / 512; // equals number of data sectors
   printf("entries to read in FAT: %d\n", entries_to_read);
 
@@ -91,16 +83,13 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
 
 
   int b = 1; // start at 1 since ent 0,1 are bad
-  /* for(b; b < blocks_in_fat; b++) { */
   for(b; b < blocks_to_read; b++) {
     // read 2 entries
     int byte1_addr = start_byte + b*3;
 
     printf("%X -> ", byte1_addr);
     int hi_nibble1 = ((disk[byte1_addr + 1] & 0x0f) << 8) & 0xf00;
-    /* printf("hi nibble: %X ", hi_nibble1); */
     int low_byte = disk[byte1_addr] & 0x0ff;
-    /* printf("low_byte: %X ", low_byte); */
     int ent1 = hi_nibble1 | low_byte;
     printf("entry: %X ", ent1);
 
@@ -109,11 +98,8 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
     else if(ent1 >= 0xFF8  && ent1 <= 0xFFF) { in_use_clust++; }
 
 
-    /* int hi_byte2 = disk[byte1_addr + 2] << 4; */
     int hi_byte2 = (disk[byte1_addr + 2] << 4) & 0x0fff;
-    /* printf("high byte: %X ", hi_byte2); */
     int low_nibble2 = (disk[byte1_addr + 1] & 0xf0) >> 4;
-    /* printf("low nibble: %X ", low_nibble2); */
     int ent2 = hi_byte2 | low_nibble2;
     printf("entry: %X \n", ent2);
 
@@ -124,7 +110,6 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
 
   printf("bytes in use: %d\n", in_use_clust * 512);
   return disk_size_bytes - (in_use_clust * 512); // 1024 bytes too much free space reported. 2 sectors more are used
-  /* return num_free_clust * 512; */
 }
 
 unsigned int fat1_start_byte(char *disk) {
@@ -223,15 +208,6 @@ int main(int argc, char **argv) {
   get_volume_label(disk, volume_label);
 
   int free_d = free_disk_size(disk, disk_size_bytes);
-  /* unsigned int res_sec_cnt = reserved_sec_cnt(disk); */
-  /* printf("root dir sectors: %d\n", root_dir_sectors()); */
-  /* printf("reserved sector count: %d\n", res_sec_cnt); */
-  /* printf("fat1 start byte: %d\n", fat1_start_byte(disk)); */
-  /* printf("rootdir start byte: %d\n", root_dir_start_byte(disk)); */
-  /* printf("data start byte: %d\n", data_start_byte(disk)); */
-  /* printf("data size bytes: %d\n", data_size_bytes(disk, disk_size_bytes)); */
-
-  /* printf("================\n"); */
   printf("OS Name: %s\n", sysname);
   printf("Label of disk: %s\n", volume_label);
   printf("Total size of the disk: %lu bytes.\n", disk_size_bytes);
@@ -243,10 +219,6 @@ int main(int argc, char **argv) {
   printf("================\n");
   printf("Number of FAT copies: %d\n", num_fats(disk));
   printf("Sectors per FAT: %d\n", sec_per_fat(disk));
- /* Free size of disk: check FAT table */
-
- /* number of files in root dir: check root directory */
-
 }
 
  /* char *mmap = mmap(disk file, ... disk size); */
