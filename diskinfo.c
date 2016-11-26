@@ -16,8 +16,11 @@ unsigned int reserved_sec_cnt(char *disk);
 void get_volume_label(char *disk, char *buffer);
 unsigned int root_dir_start_byte(char *disk);
 unsigned int data_start_byte(char *disk);
+unsigned long disk_size(char *diskname);
+unsigned long file_size(FILE *fp);
+unsigned int root_dir_sectors();
+unsigned long data_size_bytes(char *disk, unsigned long disk_size_bytes);
 
-unsigned long disk_size;
 const unsigned int BYTES_PER_SEC = 512; // equals bytes per cluster
 const unsigned int ROOT_DIR_MAX_ENT = 224;// rootdir size: 14 sec*16 entries/sec = 224 max entries
 const float BYTES_PER_FAT_ENT = 1.5;
@@ -30,11 +33,6 @@ unsigned int root_dir_sectors() {
   return root_dir_bytes() / BYTES_PER_SEC;
 }
 
-/* unsigned int data_size_bytes(disk) { */
-/*   // reserved sec count + num_fats(disk) * (sec_per_fat) */
-  
-/* } */
-
 unsigned long file_size(FILE *fp) {
   fseek(fp, 0L, SEEK_END); // set position indicator to end of file
   long size = ftell(fp);
@@ -43,8 +41,8 @@ unsigned long file_size(FILE *fp) {
   return size;
 }
 
-unsigned long data_size_bytes(char *disk) {
-  return disk_size - data_start_byte(disk);
+unsigned long data_size_bytes(char *disk, unsigned long disk_size_bytes) {
+  return disk_size_bytes - data_start_byte(disk);
 }
 
 unsigned int data_start_byte(char *disk) {
@@ -70,7 +68,7 @@ unsigned int sec_per_fat(char *disk) {
 }
 
 //read 3 bytes block at a time. 2 entries per block
-unsigned int free_disk_size(char *disk) {
+unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
   int num_free_clust = 0;
   int in_use_clust = 0;// 2 clusters
 
@@ -82,7 +80,7 @@ unsigned int free_disk_size(char *disk) {
   /* int entries_in_fat = blocks_in_fat * 2; // 3 bytes per entry // WRONG! */
   /* printf("num entries in fat: %d\n", entries_in_fat); */
 
-  int entries_to_read = data_size_bytes(disk) / 512; // equals number of data sectors
+  int entries_to_read = data_size_bytes(disk, disk_size_bytes) / 512; // equals number of data sectors
   printf("entries to read in FAT: %d\n", entries_to_read);
 
   int blocks_to_read = (entries_to_read / 2) + (entries_to_read % 2 == 0 ? 0 : 1); // 2 entries per block of 3 bytes
@@ -125,7 +123,7 @@ unsigned int free_disk_size(char *disk) {
   }
 
   printf("bytes in use: %d\n", in_use_clust * 512);
-  return disk_size - (in_use_clust * 512); // 1024 bytes too much free space reported. 2 sectors more are used
+  return disk_size_bytes - (in_use_clust * 512); // 1024 bytes too much free space reported. 2 sectors more are used
   /* return num_free_clust * 512; */
 }
 
@@ -184,6 +182,12 @@ unsigned int num_files_root_dir(char *disk) {
 
   return num_files;
 }
+unsigned long disk_size(char *diskname) {
+  FILE *fp = fopen(diskname, "r"); // open disk file
+  unsigned long size = file_size(fp); /* get disk size */
+  fclose(fp); // close the disk file
+  return size;
+}
 
 int main(int argc, char **argv) {
   if(!argv[1]) {
@@ -196,9 +200,10 @@ int main(int argc, char **argv) {
   char *disk;
   struct stat sb;
 
-  fp = fopen(argv[1], "r"); // open disk file
-  disk_size = file_size(fp); /* get disk size */
-  fclose(fp); // close the disk file
+  unsigned long disk_size_bytes = disk_size(argv[1]);
+  /* fp = fopen(argv[1], "r"); // open disk file */
+  /* disk_size = file_size(fp); /1* get disk size *1/ */
+  /* fclose(fp); // close the disk file */
 
   fd = open(argv[1], O_RDONLY); // get a file descriptor for the disk
   if(fd == -1) { perror("open"); return 1; }
@@ -217,19 +222,19 @@ int main(int argc, char **argv) {
   volume_label[8] = '\0';
   get_volume_label(disk, volume_label);
 
-  int free_d = free_disk_size(disk);
-  unsigned int res_sec_cnt = reserved_sec_cnt(disk);
-  printf("root dir sectors: %d\n", root_dir_sectors());
-  printf("reserved sector count: %d\n", res_sec_cnt);
-  printf("fat1 start byte: %d\n", fat1_start_byte(disk));
-  printf("rootdir start byte: %d\n", root_dir_start_byte(disk));
-  printf("data start byte: %d\n", data_start_byte(disk));
-  printf("data size bytes: %d\n", data_size_bytes(disk));
+  int free_d = free_disk_size(disk, disk_size_bytes);
+  /* unsigned int res_sec_cnt = reserved_sec_cnt(disk); */
+  /* printf("root dir sectors: %d\n", root_dir_sectors()); */
+  /* printf("reserved sector count: %d\n", res_sec_cnt); */
+  /* printf("fat1 start byte: %d\n", fat1_start_byte(disk)); */
+  /* printf("rootdir start byte: %d\n", root_dir_start_byte(disk)); */
+  /* printf("data start byte: %d\n", data_start_byte(disk)); */
+  /* printf("data size bytes: %d\n", data_size_bytes(disk, disk_size_bytes)); */
 
-  printf("================\n");
+  /* printf("================\n"); */
   printf("OS Name: %s\n", sysname);
   printf("Label of disk: %s\n", volume_label);
-  printf("Total size of the disk: %lu bytes.\n", disk_size);
+  printf("Total size of the disk: %lu bytes.\n", disk_size_bytes);
   printf("Total size of the disk by sec: %lu bytes.\n", total_sec(disk) * 512);
   printf("Free size of disk: %d\n", free_d);
   printf("================\n");
