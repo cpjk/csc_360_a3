@@ -1,8 +1,10 @@
 #include "utils.h"
 
+unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int clust_num);
+
 // copies the file with filename file_name from the disk's root directory
 // to the file pointed to by fp
-void copy_from_disk(char *disk, char *out_file, char *target_filename) {
+void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned long disk_size_bytes) {
   // diskget -> look for file in root dir
   // if there, get first cluster. get FAT entry for the first cluster.
   // copy cluster. if current fat entry says this is the last cluster, we're done.
@@ -42,17 +44,44 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename) {
 
       if(strcmp(filename, target_filename) != 0) { continue; }
       // actually copy shit
-      int first_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
+      unsigned int first_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
       // Address of data region + (Cluster number-2) * Sectors per cluster * Bytes per sector
 
-      printf("first cluster: %X\n", first_clust);
-      return;
+      printf("first cluster: %X. ", first_clust);
+      unsigned long ent_val = fat_entry(disk, disk_size_bytes, first_clust);
 
+      printf("FAT entry for first cluster: %X\n", ent_val);
+      printf("FAT entry for cluster 3: %X\n", fat_entry(disk, disk_size_bytes, 3));
+      return;
     }
   }
 
   printf("file %s not found in root directory.\n", target_filename);
 }
+
+//read 3 bytes block at a time. 2 entries per block
+// data clusters start at 2 as well
+// so for cluster n,
+// if entry num is even- addr is low four bits in location 1+(3*n)/2 and the 8 bits in location (3*n)/2
+// entry n is odd, then the physical location of the entry is the high four bits in location (3*n)/2 and
+
+unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int clust_num) {
+  unsigned int entry;
+  unsigned int fat_start_byte = fat1_start_byte(disk);
+
+  if (clust_num % 2 == 0) { // even entry number
+    // low four bits in location 1+(3*n)/2 and the 8 bits in location (3*n)/2
+    entry = ((disk[fat_start_byte + 1 + (3*clust_num/2)] & 0x0F) << 8) | disk[fat_start_byte + (3*clust_num/2)];
+  }
+  else {
+    // the high four bits in location (3*n)/2 and the 8 bits in location 1+(3*n)/2
+    entry = ((disk[fat_start_byte + 1 + (3*clust_num/2)]) << 4) | ((disk[fat_start_byte + (3*clust_num/2)] & 0xF0) >> 4);
+  }
+  printf("entry %d value: %X\n", clust_num, entry);
+
+  return entry;
+}
+
 
 unsigned int root_dir_f_size(char *disk, char *target_filename) {
   unsigned int start_byte = root_dir_start_byte(disk);
@@ -153,5 +182,5 @@ int main(int argc, char **argv) {
   // map output file to memory
   char *out_map = (char *) mmap(0, outputfsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-  copy_from_disk(disk, out_map, argv[2]);
+  copy_from_disk(disk, out_map, argv[2], disk_size_bytes);
 }
