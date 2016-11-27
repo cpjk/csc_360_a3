@@ -20,9 +20,54 @@ void list_root_dir(char *disk) {
       unsigned int byte3 = disk[entry_start_byte + 0x1c + 2] & 0x00FF;
       unsigned int byte4 = disk[entry_start_byte + 0x1c + 3] & 0x00FF;
       unsigned long filesize = (byte4 << 24) | (byte3 << 16) | (byte2 << 8 ) | (byte1);
-      /* char filename[21]; */
-      /* filename[20] = '\0'; */
-      printf("F %ld\n", filesize);
+
+      int i;
+      char filename[21] = "";
+      for(i = 0; i < 21; i++) {
+        filename[i] = '\0';
+      }
+
+      for(i = 0; i < 8; i++) {
+        if(disk[entry_start_byte + i] == 0x20) break;
+        filename[i] = disk[entry_start_byte + i];
+      }
+
+      char fextension[4] = "";
+      for(i = 0; i < 4; i++) {
+        fextension[i] = '\0';
+      }
+
+      for(i = 0; i < 3; i++) {
+        char c = disk[entry_start_byte + 0x08 + i];
+        fextension[i] = c;
+      }
+
+      unsigned int time_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
+      unsigned int time_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
+      /* printf("byte 1:  %X ", time_byte1); */
+      /* printf("byte 2:  %X ", time_byte2); */
+
+      unsigned int time = (time_byte1 | time_byte2 << 8) & 0xFFFF;
+      printf("time:  %X ", time);
+
+      int hours = (time >> 11) & 0x1F; // 5 bits (15-11)
+      int min = (time >> 5) & 0x3F; // 6 bits (10-5)
+
+      // add a zero for hours or mins less than 10
+      char hour_pad = hours < 10 ? '0' : '\0';
+      char min_pad = min < 10 ? '0' : '\0';
+
+      unsigned int date_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
+      unsigned int date_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
+      /* printf("byte 1:  %X ", date_byte1); */
+      /* printf("byte 2:  %X ", date_byte2); */
+
+      unsigned int date = (date_byte1 | date_byte2 << 8) & 0xFFFF;
+      printf("date:  %X ", date);
+
+      /* printf("hours: %c%d ", hour_pad, hours); */
+      /* printf("min: %c%d ", min_pad, min); */
+      printf("F %ld %20s.%s date %c%d:%c%d\n", filesize, filename,  fextension, hour_pad, hours, min_pad, min);
     }
   }
 
