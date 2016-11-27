@@ -23,9 +23,7 @@ void list_root_dir(char *disk) {
 
       int i;
       char filename[21] = "";
-      for(i = 0; i < 21; i++) {
-        filename[i] = '\0';
-      }
+      for(i = 0; i < 21; i++) { filename[i] = '\0'; }
 
       for(i = 0; i < 8; i++) {
         if(disk[entry_start_byte + i] == 0x20) break;
@@ -33,9 +31,7 @@ void list_root_dir(char *disk) {
       }
 
       char fextension[4] = "";
-      for(i = 0; i < 4; i++) {
-        fextension[i] = '\0';
-      }
+      for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
 
       for(i = 0; i < 3; i++) {
         char c = disk[entry_start_byte + 0x08 + i];
@@ -44,30 +40,24 @@ void list_root_dir(char *disk) {
 
       unsigned int time_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
       unsigned int time_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
-      /* printf("byte 1:  %X ", time_byte1); */
-      /* printf("byte 2:  %X ", time_byte2); */
-
       unsigned int time = (time_byte1 | time_byte2 << 8) & 0xFFFF;
-      printf("time:  %X ", time);
-
       int hours = (time >> 11) & 0x1F; // 5 bits (15-11)
       int min = (time >> 5) & 0x3F; // 6 bits (10-5)
+
+      unsigned int date_byte1 = disk[entry_start_byte + 0x10] & 0x0FF;
+      unsigned int date_byte2 = disk[entry_start_byte + 0x10 + 1] & 0x0FF;
+      unsigned int date = (date_byte1 | date_byte2 << 8) & 0xFFFF;
+      unsigned int year = ((date >> 9) & 0x7F) + 1980;  // 7 bits (15-9)
+      unsigned int month = (date >> 5) & 0x0F;   // 4 bits (8-5)
+      unsigned int day =  date & 0x1F;    // 5 bits (4-0)
 
       // add a zero for hours or mins less than 10
       char hour_pad = hours < 10 ? '0' : '\0';
       char min_pad = min < 10 ? '0' : '\0';
 
-      unsigned int date_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
-      unsigned int date_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
-      /* printf("byte 1:  %X ", date_byte1); */
-      /* printf("byte 2:  %X ", date_byte2); */
-
-      unsigned int date = (date_byte1 | date_byte2 << 8) & 0xFFFF;
-      printf("date:  %X ", date);
-
-      /* printf("hours: %c%d ", hour_pad, hours); */
-      /* printf("min: %c%d ", min_pad, min); */
-      printf("F %ld %20s.%s date %c%d:%c%d\n", filesize, filename,  fextension, hour_pad, hours, min_pad, min);
+      printf("F %ld %20s.%s ", filesize, filename,  fextension);
+      printf("%d-%d-%d ", year, month, day);
+      printf("%c%d:%c%d\n", hour_pad, hours, min_pad, min);
     }
   }
 
