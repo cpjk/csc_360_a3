@@ -2,7 +2,55 @@
 
 // copies the file with filename file_name from the disk's root directory
 // to the file pointed to by fp
-void copy_from_disk(char *disk, char *file_name, FILE *fp) {
+void copy_from_disk(char *disk, char *out_file, char *target_filename) {
+  // diskget -> look for file in root dir
+  // if there, get first cluster. get FAT entry for the first cluster.
+  // copy cluster. if current fat entry says this is the last cluster, we're done.
+  // else, get the next cluster from the current entry and get the corresponding next entry from that cluster.
+  //
+  unsigned int start_byte = root_dir_start_byte(disk);
+
+  int ent = 0;
+  for(ent; ent < ROOT_DIR_MAX_ENT; ent++) {
+    unsigned int entry_start_byte = start_byte + (32 * ent); // 32 bytes per entry
+    unsigned int attr_byte = entry_start_byte + 0x0b;
+    if(disk[attr_byte] == 0x0f) { continue; } // long file name entry (fake entry)
+    if((disk[attr_byte] & 0x02) != 0) { continue; } // hidden file
+    if(disk[entry_start_byte] == 0x00) { // free entry and rest are free
+      printf("file %s not found in root directory.\n", target_filename);
+      return;
+    }
+    if(disk[entry_start_byte] == 0xe5) { continue; } // free entry
+    if(disk[entry_start_byte] == 0x2e) { continue; } // dot directory
+    if((disk[attr_byte] & 0x08) != 0) { continue; } // volume label
+
+    if((disk[attr_byte] & 0x10) == 0) { // not subdirectory (actual file)
+      int i;
+      char filename[21] = "";
+      for(i = 0; i < 21; i++) { filename[i] = '\0'; }
+      for(i = 0; i < 8; i++) {
+        if(disk[entry_start_byte + i] == 0x20) break;
+        filename[i] = disk[entry_start_byte + i];
+      }
+
+      char fextension[4] = "";
+      for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
+      for(i = 0; i < 3; i++) { fextension[i] = disk[entry_start_byte + 0x08 + i]; }
+
+      strncat(filename, ".", 1);
+      strncat(filename, fextension, strlen(fextension));
+
+      if(strcmp(filename, target_filename) != 0) { continue; }
+      // actually copy shit
+      int first_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
+      printf("first cluster: %X\n", first_clust);
+      return;
+
+
+    }
+  }
+
+  printf("file %s not found in root directory.\n", target_filename);
 }
 
 unsigned int root_dir_f_size(char *disk, char *target_filename) {
@@ -34,12 +82,7 @@ unsigned int root_dir_f_size(char *disk, char *target_filename) {
 
       char fextension[4] = "";
       for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
-
-      for(i = 0; i < 3; i++) {
-        char c = disk[entry_start_byte + 0x08 + i];
-        fextension[i] = c;
-      }
-
+      for(i = 0; i < 3; i++) { fextension[i] = disk[entry_start_byte + 0x08 + i]; }
       strncat(filename, ".", 1);
       strncat(filename, fextension, strlen(fextension));
 
@@ -134,13 +177,6 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-  /* FILE *fp; */
-  /* /1* fp = fopen(argv[2], "rw"); *1/ */
-  /* fp = fopen(argv[2], "ab+"); // open file and create if does not exist */
-
-  int output_fd = open(argv[2], O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-  if (output_fd == -1) { perror("Error opening file for writing"); exit(EXIT_FAILURE); }
-
   int fd;
   char *disk;
   struct stat sb;
@@ -157,10 +193,30 @@ int main(int argc, char **argv) {
 
   printf("Files on disk: \n");
   list_root_dir(disk);
+
+  fd = open(argv[2], O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+  if (fd == -1) { perror("Error opening file for writing"); exit(EXIT_FAILURE); }
+
   unsigned int file_size = root_dir_f_size(disk, argv[2]);
 
-  // diskget -> look for file in root dir
-  // if there, get first cluster. get FAT entry for the first cluster.
-  // copy cluster. if current fat entry says this is the last cluster, we're done.
-  // else, get the next cluster from the current entry and get the corresponding next entry from that cluster.
+  size_t outputfsize = (size_t) (file_size + 1);
+
+  // stretch output file size to size we will mmap
+  if (lseek(fd, outputfsize - 1, SEEK_SET) == -1) {
+    close(fd);
+    perror("Error calling lseek() to 'stretch' the file");
+    exit(EXIT_FAILURE);
+  }
+
+  // write an empty char at the end of the file to actually stretch it
+  if (write(fd, "", 1) == -1) {
+    close(fd);
+    perror("Error calling lseek() to 'stretch' the file");
+    exit(EXIT_FAILURE);
+  }
+
+  // map output file to memory
+  char *out_map = (char *) mmap(0, outputfsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+  copy_from_disk(disk, out_map, argv[2]);
 }
