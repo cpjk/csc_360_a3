@@ -4,13 +4,14 @@ unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int c
 
 // copies the file with filename file_name from the disk's root directory
 // to the file pointed to by fp
-void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned long disk_size_bytes) {
+void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned long disk_size_bytes, unsigned int target_fsize) {
   // diskget -> look for file in root dir
   // if there, get first cluster. get FAT entry for the first cluster.
   // copy cluster. if current fat entry says this is the last cluster, we're done.
   // else, get the next cluster from the current entry and get the corresponding next entry from that cluster.
   //
   unsigned int start_byte = root_dir_start_byte(disk);
+  unsigned int bytes_rem = target_fsize;
 
   int ent = 0;
   for(ent; ent < ROOT_DIR_MAX_ENT; ent++) {
@@ -44,14 +45,52 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned 
 
       if(strcmp(filename, target_filename) != 0) { continue; }
       // actually copy shit
-      unsigned int first_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
-      // Address of data region + (Cluster number-2) * Sectors per cluster * Bytes per sector
 
-      printf("first cluster: %X. ", first_clust);
-      unsigned long ent_val = fat_entry(disk, disk_size_bytes, first_clust);
 
-      printf("FAT entry for first cluster: %X\n", ent_val);
-      printf("FAT entry for cluster 3: %X\n", fat_entry(disk, disk_size_bytes, 3));
+
+      // FAT entry for given cluster gives number of next cluster in file or tells that this is last cluster in file
+
+      // first cluster of file
+      unsigned int curr_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
+      unsigned long curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
+
+
+
+      unsigned int outfile_clust_num = 0;
+
+      /* int done = 0; */
+      while(1) {
+        /* printf("current cluster: %X. ", curr_clust); */
+        /* curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust); */
+        /* printf("FAT entry for cluster %d: %X\n", curr_clust, curr_ent_val); */
+
+        // write cluster to file
+        int j;
+        for(j = 0; j < BYTES_PER_SEC; j++) {
+          if(bytes_rem <= 0) { printf("wrote all bytes.\n"); return; }
+
+          // Address of data region + (Cluster number-2) * Sectors per cluster * Bytes per sector
+          out_file[(outfile_clust_num * BYTES_PER_SEC) + j] = disk[data_start_byte(disk) + ((curr_clust - 2)*BYTES_PER_SEC) + j];
+          printf("writing %c\n", disk[data_start_byte(disk) + ((curr_clust - 2)*BYTES_PER_SEC) + j]);
+          bytes_rem --;
+        }
+
+        if(curr_ent_val >= 0xFF8 && curr_ent_val <= 0xFFF) {
+          /* printf("cluster %d is last cluster in file.\n", curr_clust); */
+          return;
+        }
+        else if(curr_ent_val >= 0x002 && curr_ent_val <= 0xFEF) {
+          /* printf("cluster %d is next cluster in file.\n", curr_ent_val); */
+
+          // get next cluster
+          curr_clust = curr_ent_val;
+          curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
+          outfile_clust_num++;
+        }
+        else {
+          /* printf("different entry val found: %d\n", curr_ent_val); return; */
+        }
+      }
       return;
     }
   }
@@ -77,7 +116,7 @@ unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int c
     // the high four bits in location (3*n)/2 and the 8 bits in location 1+(3*n)/2
     entry = ((disk[fat_start_byte + 1 + (3*clust_num/2)]) << 4) | ((disk[fat_start_byte + (3*clust_num/2)] & 0xF0) >> 4);
   }
-  printf("entry %d value: %X\n", clust_num, entry);
+  /* printf("entry %d value: %X\n", clust_num, entry); */
 
   return entry;
 }
@@ -182,5 +221,5 @@ int main(int argc, char **argv) {
   // map output file to memory
   char *out_map = (char *) mmap(0, outputfsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-  copy_from_disk(disk, out_map, argv[2], disk_size_bytes);
+  copy_from_disk(disk, out_map, argv[2], disk_size_bytes, file_size);
 }

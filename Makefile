@@ -15,4 +15,4 @@ run: all
 	./diskinfo disk2.IMA
 
 clean:
-	rm *.o
+	rm *.o *.PDF
