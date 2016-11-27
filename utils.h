@@ -9,6 +9,7 @@
 
  // equals bytes per cluster
 #define BYTES_PER_SEC 512
+
 // rootdir size: 14 sec*16 entries/sec = 224 max entries
 #define ROOT_DIR_MAX_ENT 224
 #define BYTES_PER_FAT_ENT 1.5

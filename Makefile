@@ -8,6 +8,9 @@ diskinfo: diskinfo.c
 disklist:
 	$(CC) disklist.c utils.c -o disklist.o -g
 
+diskget:
+	$(CC) diskget.c utils.c -o diskget.o -g
+
 run: all
 	./diskinfo disk2.IMA
 
