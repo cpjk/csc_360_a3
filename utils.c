@@ -1,5 +1,6 @@
 #include "utils.h"
 
+// number of free clusters on the disk
 unsigned int free_disk_clusters(char *disk, unsigned long disk_size_bytes) {
   unsigned int free_clusters = 0;
   int i;
@@ -13,6 +14,7 @@ unsigned int free_disk_bytes(char *disk, unsigned long disk_size_bytes) {
   return free_disk_clusters(disk, disk_size_bytes) * 512;
 }
 
+// value of the FAT entry number clust_num
 unsigned int fat_entry(char *disk, unsigned int clust_num) {
   unsigned int entry;
   unsigned int fat_start_byte = fat1_start_byte(disk);
@@ -34,6 +36,7 @@ unsigned int fat_entry(char *disk, unsigned int clust_num) {
   return entry;
 }
 
+// size of file in the root directory in bytes
 unsigned int root_dir_f_size(char *disk, char *target_filename) {
   unsigned int start_byte = root_dir_start_byte(disk);
 
@@ -82,14 +85,17 @@ unsigned int root_dir_f_size(char *disk, char *target_filename) {
   return 0;
 }
 
+// length of the root directory in bytes
 unsigned int root_dir_bytes() {
   return 32 * ROOT_DIR_MAX_ENT;
 }
 
+// number of sectors in the root directory
 unsigned int root_dir_sectors() {
   return root_dir_bytes() / BYTES_PER_SEC;
 }
 
+// file size of the given file in bytes
 unsigned long file_size(FILE *fp) {
   fseek(fp, 0L, SEEK_END); // set position indicator to end of file
   long size = ftell(fp);
@@ -98,42 +104,51 @@ unsigned long file_size(FILE *fp) {
   return size;
 }
 
+// number of bytes in the data portion
 unsigned long data_size_bytes(char *disk, unsigned long disk_size_bytes) {
   return disk_size_bytes - data_start_byte(disk);
 }
 
+// first byte in the data portion
 unsigned int data_start_byte(char *disk) {
   //   Address of data region: Address of root directory + Maximum number
   //   of root directory entries * 32
   return root_dir_start_byte(disk) + root_dir_bytes();
 }
 
+// number of reserved sectors
 unsigned int reserved_sec_cnt(char *disk) {
   return (unsigned int) disk[0x0e] | (disk[0x0f] << 8);
 }
 
+// first byte in the root directory
 unsigned int root_dir_start_byte(char *disk) {
   // Address of first FAT + Number of FATs * Sectors per FAT
   return (unsigned int) fat1_start_byte(disk) + num_fats(disk) * sec_per_fat(disk) * BYTES_PER_SEC;
 }
 
+// sectors per FAT
 unsigned int sec_per_fat(char *disk) {
   return (unsigned int) ((disk[0x17] << 8) | disk[0x16]);
 }
 
+// first byte in the first FAT
 unsigned int fat1_start_byte(char *disk) {
   //Start sector for partition 1 + Reserved sector count) * Bytes per sector
   return (unsigned int) reserved_sec_cnt(disk) * BYTES_PER_SEC;
 }
 
+// number of FATs
 unsigned int num_fats(char *disk) {
   return (unsigned int) disk[0x10];
 }
 
+// total sectors on disk
 unsigned int total_sec(char *disk) {
   return disk[0x13] | (disk[0x14] << 8);
 }
 
+// volume label
 void get_volume_label(char *disk, char *buffer) {
   unsigned int start_byte = root_dir_start_byte(disk);
 
@@ -156,6 +171,7 @@ void get_volume_label(char *disk, char *buffer) {
   return;
 }
 
+// number of files in the root directory
 unsigned int num_files_root_dir(char *disk) {
   unsigned int start_byte = root_dir_start_byte(disk);
   unsigned int num_files = 0;
@@ -175,6 +191,7 @@ unsigned int num_files_root_dir(char *disk) {
 
   return num_files;
 }
+// size of the disk in bytes
 unsigned long disk_size(char *diskname) {
   FILE *fp = fopen(diskname, "r"); // open disk file
   unsigned long size = file_size(fp); /* get disk size */
