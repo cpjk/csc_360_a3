@@ -105,6 +105,12 @@ int main(int argc, char **argv) {
 
   unsigned long disk_size_bytes = disk_size(argv[1]);
 
+
+  if( access( argv[2], F_OK ) != -1 ) {
+    printf("File %s already exists.\n", argv[2]);
+    exit(EXIT_FAILURE);
+  }
+
   fd = open(argv[2], O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
   if (fd == -1) { perror("Error opening file for writing"); exit(EXIT_FAILURE); }
 
