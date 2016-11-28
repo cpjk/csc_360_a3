@@ -1,6 +1,6 @@
 CC = gcc
 
-all: diskinfo
+all: diskinfo disklist diskget
 
 diskinfo: diskinfo.c
 	$(CC) diskinfo.c utils.c -o diskinfo.o -g
@@ -10,9 +10,6 @@ disklist:
 
 diskget:
 	$(CC) diskget.c utils.c -o diskget.o -g
-
-diskput:
-	$(CC) diskput.c utils.c -o diskput.o -g
 
 run: all
 	./diskinfo disk2.IMA
