@@ -70,7 +70,7 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned 
           outfile_clust_num++;
         }
         else {
-          printf("different entry val found: %X\n", curr_ent_val); return;
+          printf("different entry val found.\n"); return;
         }
       }
       return;
