@@ -1,5 +1,39 @@
 #include "utils.h"
 
+unsigned int data_clusters(char *disk, unsigned long disk_size_bytes) {
+  unsigned int clust = data_size_bytes(disk, disk_size_bytes) / 512;
+  unsigned int dstartsec = data_start_byte(disk)/512;
+  unsigned int dsec = total_sec(disk) - dstartsec;
+
+  return dsec;
+}
+unsigned int entries_per_fat(char *disk) {
+  return sec_per_fat(disk) * BYTES_PER_SEC / 3; // 3 bytes per entry
+}
+
+unsigned int free_disk_clusters(char *disk, unsigned long disk_size_bytes) {
+  unsigned int free_clusters = 0;
+  unsigned int in_use_clust = 0;
+
+  int i;
+  for(i = 2; i < total_sec(disk); i++) {
+    unsigned int ent_val = fat_entry(disk, i);
+    if(ent_val == 0x000) {
+      free_clusters++;
+    }
+    else {
+      in_use_clust++;
+    }
+  }
+  /* printf("In use clusters: %d", in_use_clust); */
+  return free_clusters;
+
+  /* return total_data_clust - in_use_clust; */
+}
+unsigned int free_disk_bytes(char *disk, unsigned long disk_size_bytes) {
+  return free_disk_clusters(disk, disk_size_bytes) * 512;
+}
+
 int main(int argc, char **argv) {
   if(!argv[1]) {
     printf("No file argument provided. Exiting.\n");
@@ -30,12 +64,10 @@ int main(int argc, char **argv) {
   volume_label[8] = '\0';
   get_volume_label(disk, volume_label);
 
-  int free_d = free_disk_size(disk, disk_size_bytes);
   printf("OS Name: %s\n", sysname);
   printf("Label of disk: %s\n", volume_label);
   printf("Total size of the disk: %lu bytes.\n", disk_size_bytes);
-  printf("Total size of the disk by sec: %u bytes.\n", total_sec(disk) * 512);
-  printf("Free size of disk: %d\n", free_d);
+  printf("Free size of disk: %d\n", free_disk_bytes(disk, disk_size_bytes));
   printf("================\n");
   printf("Number of files in the root directory (not including subdirectories): %d\n",
       num_files_root_dir(disk));
@@ -43,62 +75,3 @@ int main(int argc, char **argv) {
   printf("Number of FAT copies: %d\n", num_fats(disk));
   printf("Sectors per FAT: %d\n", sec_per_fat(disk));
 }
-
- /* char *mmap = mmap(disk file, ... disk size); */
-
- /* other variables: check boot sector */
-
- /* munmap(disk file) */
- /* close disk file */
-
-
- // disklist
-
- /* open disk file */
- /* get disk size */
- /* char *mmap = mmap(disk file, ... disk size); */
-
- /* while(mmap[root dir] != 0) { */
- /*         // check attributes for 'D' or 'F' */
- /*          //   get time&date(handle little endian), and print accordingly */
-
- /*   root dir += offset(32 bytes); //next entry */
- /* } */
-
-// munmap(disk file)
-// close disk file
-
-// diskget
-
-// open disk file
-//  get disk size
-// char *src = mmap(disk file, ... disk size)
-
-//  check for file to be copied in disk root dir, grab its file size & related info
-//  open a file in current directory with same size
-// char *dest = mmap(new file, ... file size)
-/* copy file from src->dest, reading sector by sector */
-
-/* munmap(disk file) */
-/* munmap(file) */
-
-/* close disk file */
-/* close file */
-
-/* // diskput */
-
-/* open(check) file to be copied in current dir */
-/* grab its file size & related info */
-/* char *src = mmap(file, ... file size) */
-/* open disk file */
-/* get disk size */
-/* char *dest = mmap(disk file, ... disk size) */
-/* check for free space in disk */
-/* Add file entry in disk root dir */ 
-/* copy file from src->dest, reading sector by sector, update FAT table in the meantime */
-
-/* munmap(disk file) */
-/* munmap(file) */
-
-/* close disk file */
-/* close file */
