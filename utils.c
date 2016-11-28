@@ -1,5 +1,18 @@
 #include "utils.h"
 
+unsigned int free_disk_clusters(char *disk, unsigned long disk_size_bytes) {
+  unsigned int free_clusters = 0;
+  int i;
+
+  for(i = 2; i < total_sec(disk); i++) {
+    if(fat_entry(disk, i) == 0x000) { free_clusters++; }
+  }
+  return free_clusters;
+}
+unsigned int free_disk_bytes(char *disk, unsigned long disk_size_bytes) {
+  return free_disk_clusters(disk, disk_size_bytes) * 512;
+}
+
 unsigned int fat_entry(char *disk, unsigned int clust_num) {
   unsigned int entry;
   unsigned int fat_start_byte = fat1_start_byte(disk);
@@ -90,9 +103,6 @@ unsigned long data_size_bytes(char *disk, unsigned long disk_size_bytes) {
 }
 
 unsigned int data_start_byte(char *disk) {
-/* fat12.data_start_addr = fat12.root_dir_sector*fat12.bytes_per_sector + */
-/* fat12.max_root_dir_entries*32; */
-
   //   Address of data region: Address of root directory + Maximum number
   //   of root directory entries * 32
   return root_dir_start_byte(disk) + root_dir_bytes();

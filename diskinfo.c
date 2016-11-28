@@ -1,39 +1,5 @@
 #include "utils.h"
 
-unsigned int data_clusters(char *disk, unsigned long disk_size_bytes) {
-  unsigned int clust = data_size_bytes(disk, disk_size_bytes) / 512;
-  unsigned int dstartsec = data_start_byte(disk)/512;
-  unsigned int dsec = total_sec(disk) - dstartsec;
-
-  return dsec;
-}
-unsigned int entries_per_fat(char *disk) {
-  return sec_per_fat(disk) * BYTES_PER_SEC / 3; // 3 bytes per entry
-}
-
-unsigned int free_disk_clusters(char *disk, unsigned long disk_size_bytes) {
-  unsigned int free_clusters = 0;
-  unsigned int in_use_clust = 0;
-
-  int i;
-  for(i = 2; i < total_sec(disk); i++) {
-    unsigned int ent_val = fat_entry(disk, i);
-    if(ent_val == 0x000) {
-      free_clusters++;
-    }
-    else {
-      in_use_clust++;
-    }
-  }
-  /* printf("In use clusters: %d", in_use_clust); */
-  return free_clusters;
-
-  /* return total_data_clust - in_use_clust; */
-}
-unsigned int free_disk_bytes(char *disk, unsigned long disk_size_bytes) {
-  return free_disk_clusters(disk, disk_size_bytes) * 512;
-}
-
 int main(int argc, char **argv) {
   if(!argv[1]) {
     printf("No file argument provided. Exiting.\n");
