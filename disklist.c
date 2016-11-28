@@ -1,5 +1,6 @@
 #include "utils.h"
 
+// list contents of the root directory
 void list_root_dir(char *disk) {
   unsigned int start_byte = root_dir_start_byte(disk);
 
@@ -14,51 +15,53 @@ void list_root_dir(char *disk) {
     if(disk[entry_start_byte] == 0x2e) { continue; } // dot directory
     if((disk[attr_byte] & 0x08) != 0) { continue; } // volume label
 
-    if((disk[attr_byte] & 0x10) == 0) { // not subdirectory (actual file)
-      unsigned int byte1 = disk[entry_start_byte + 0x1c] & 0x00FF;
-      unsigned int byte2 = disk[entry_start_byte + 0x1c + 1] & 0x00FF;
-      unsigned int byte3 = disk[entry_start_byte + 0x1c + 2] & 0x00FF;
-      unsigned int byte4 = disk[entry_start_byte + 0x1c + 3] & 0x00FF;
-      unsigned long filesize = (byte4 << 24) | (byte3 << 16) | (byte2 << 8 ) | (byte1);
+    char *type = ((disk[attr_byte] & 0x10) == 0) ? "F" : "D"; // 0x10 indicates a subdirectory
 
-      int i;
-      char filename[21] = "";
-      for(i = 0; i < 21; i++) { filename[i] = '\0'; }
+    unsigned int byte1 = disk[entry_start_byte + 0x1c] & 0x00FF;
+    unsigned int byte2 = disk[entry_start_byte + 0x1c + 1] & 0x00FF;
+    unsigned int byte3 = disk[entry_start_byte + 0x1c + 2] & 0x00FF;
+    unsigned int byte4 = disk[entry_start_byte + 0x1c + 3] & 0x00FF;
+    unsigned long filesize = (byte4 << 24) | (byte3 << 16) | (byte2 << 8 ) | (byte1);
 
-      for(i = 0; i < 8; i++) {
-        if(disk[entry_start_byte + i] == 0x20) break;
-        filename[i] = disk[entry_start_byte + i];
-      }
-
-      char fextension[4] = "";
-      for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
-
-      for(i = 0; i < 3; i++) {
-        char c = disk[entry_start_byte + 0x08 + i];
-        fextension[i] = c;
-      }
-
-      unsigned int time_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
-      unsigned int time_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
-      unsigned int time = (time_byte1 | time_byte2 << 8) & 0xFFFF;
-      int hours = (time >> 11) & 0x1F; // 5 bits (15-11)
-      int min = (time >> 5) & 0x3F; // 6 bits (10-5)
-
-      unsigned int date_byte1 = disk[entry_start_byte + 0x10] & 0x0FF;
-      unsigned int date_byte2 = disk[entry_start_byte + 0x10 + 1] & 0x0FF;
-      unsigned int date = (date_byte1 | date_byte2 << 8) & 0xFFFF;
-      unsigned int year = ((date >> 9) & 0x7F) + 1980;  // 7 bits (15-9)
-      unsigned int month = (date >> 5) & 0x0F;   // 4 bits (8-5)
-      unsigned int day =  date & 0x1F;    // 5 bits (4-0)
-
-      // add a zero for hours or mins less than 10
-      char hour_pad = hours < 10 ? '0' : '\0';
-      char min_pad = min < 10 ? '0' : '\0';
-
-      printf("F %ld %20s.%s ", filesize, filename,  fextension);
-      printf("%d-%d-%d ", year, month, day);
-      printf("%c%d:%c%d\n", hour_pad, hours, min_pad, min);
+    // get file name
+    int i;
+    char filename[21] = "";
+    for(i = 0; i < 21; i++) { filename[i] = '\0'; }
+    for(i = 0; i < 8; i++) {
+      if(disk[entry_start_byte + i] == 0x20) break;
+      filename[i] = disk[entry_start_byte + i];
     }
+
+    // get file extension
+    char fextension[4] = "";
+    for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
+    for(i = 0; i < 3; i++) {
+      char c = disk[entry_start_byte + 0x08 + i];
+      fextension[i] = c;
+    }
+
+    // get time
+    unsigned int time_byte1 = disk[entry_start_byte + 0x0e] & 0x0FF;
+    unsigned int time_byte2 = disk[entry_start_byte + 0x0e + 1] & 0x0FF;
+    unsigned int time = (time_byte1 | time_byte2 << 8) & 0xFFFF;
+    int hours = (time >> 11) & 0x1F; // 5 bits (15-11)
+    int min = (time >> 5) & 0x3F; // 6 bits (10-5)
+
+    // get date
+    unsigned int date_byte1 = disk[entry_start_byte + 0x10] & 0x0FF;
+    unsigned int date_byte2 = disk[entry_start_byte + 0x10 + 1] & 0x0FF;
+    unsigned int date = (date_byte1 | date_byte2 << 8) & 0xFFFF;
+    unsigned int year = ((date >> 9) & 0x7F) + 1980;  // 7 bits (15-9)
+    unsigned int month = (date >> 5) & 0x0F;   // 4 bits (8-5)
+    unsigned int day =  date & 0x1F;    // 5 bits (4-0)
+
+    // add a zero for hours or mins less than 10
+    char hour_pad = hours < 10 ? '0' : '\0';
+    char min_pad = min < 10 ? '0' : '\0';
+
+    printf("%s %ld %20s.%s ", type, filesize, filename,  fextension);
+    printf("%d-%d-%d ", year, month, day);
+    printf("%c%d:%c%d\n", hour_pad, hours, min_pad, min);
   }
 
 }
