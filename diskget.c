@@ -46,7 +46,7 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned 
 
       // first cluster of file
       unsigned int curr_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
-      unsigned long curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
+      unsigned long curr_ent_val = fat_entry(disk, curr_clust);
       unsigned int outfile_clust_num = 0;
 
       while(1) {
@@ -66,7 +66,7 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned 
         if(curr_ent_val >= 0xFF8 && curr_ent_val <= 0xFFF) { return; }
         else if(curr_ent_val >= 0x002 && curr_ent_val <= 0xFEF) {
           curr_clust = curr_ent_val; // get next cluster
-          curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
+          curr_ent_val = fat_entry(disk, curr_clust);
           outfile_clust_num++;
         }
         else {
