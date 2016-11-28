@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   printf("OS Name: %s\n", sysname);
   printf("Label of disk: %s\n", volume_label);
   printf("Total size of the disk: %lu bytes.\n", disk_size_bytes);
-  printf("Total size of the disk by sec: %lu bytes.\n", total_sec(disk) * 512);
+  printf("Total size of the disk by sec: %u bytes.\n", total_sec(disk) * 512);
   printf("Free size of disk: %d\n", free_d);
   printf("================\n");
   printf("Number of files in the root directory (not including subdirectories): %d\n",
