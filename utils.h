@@ -15,6 +15,8 @@
 #define BYTES_PER_FAT_ENT 1.5
 
 
+unsigned int root_dir_f_size(char *disk, char *target_filename);
+unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int clust_num);
 unsigned long file_size(FILE *fp);
 unsigned int sec_per_fat(char *disk);
 unsigned int fat1_start_byte(char *disk);
