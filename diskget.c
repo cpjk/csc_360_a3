@@ -39,56 +39,40 @@ void copy_from_disk(char *disk, char *out_file, char *target_filename, unsigned 
       char fextension[4] = "";
       for(i = 0; i < 4; i++) { fextension[i] = '\0'; }
       for(i = 0; i < 3; i++) { fextension[i] = disk[entry_start_byte + 0x08 + i]; }
-
       strncat(filename, ".", 1);
       strncat(filename, fextension, strlen(fextension));
 
       if(strcmp(filename, target_filename) != 0) { continue; }
-      // actually copy shit
-
-
 
       // FAT entry for given cluster gives number of next cluster in file or tells that this is last cluster in file
 
       // first cluster of file
       unsigned int curr_clust = disk[entry_start_byte + 0x1a] | (disk[entry_start_byte + 0x1a + 1] << 8);
       unsigned long curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
-
-
-
       unsigned int outfile_clust_num = 0;
 
-      /* int done = 0; */
       while(1) {
-        /* printf("current cluster: %X. ", curr_clust); */
-        /* curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust); */
-        /* printf("FAT entry for cluster %d: %X\n", curr_clust, curr_ent_val); */
-
         // write cluster to file
         int j;
         for(j = 0; j < BYTES_PER_SEC; j++) {
-          if(bytes_rem <= 0) { printf("wrote all bytes.\n"); return; }
+          if(bytes_rem <= 0) { return; }
 
           // Address of data region + (Cluster number-2) * Sectors per cluster * Bytes per sector
-          out_file[(outfile_clust_num * BYTES_PER_SEC) + j] = disk[data_start_byte(disk) + ((curr_clust - 2)*BYTES_PER_SEC) + j];
-          printf("writing %c\n", disk[data_start_byte(disk) + ((curr_clust - 2)*BYTES_PER_SEC) + j]);
+          unsigned long disk_loc = data_start_byte(disk) + ((curr_clust - 2)*BYTES_PER_SEC) + j;
+          unsigned long outfile_loc = (outfile_clust_num * BYTES_PER_SEC) + j;
+
+          out_file[outfile_loc] = disk[disk_loc];
           bytes_rem --;
         }
 
-        if(curr_ent_val >= 0xFF8 && curr_ent_val <= 0xFFF) {
-          /* printf("cluster %d is last cluster in file.\n", curr_clust); */
-          return;
-        }
+        if(curr_ent_val >= 0xFF8 && curr_ent_val <= 0xFFF) { return; }
         else if(curr_ent_val >= 0x002 && curr_ent_val <= 0xFEF) {
-          /* printf("cluster %d is next cluster in file.\n", curr_ent_val); */
-
-          // get next cluster
-          curr_clust = curr_ent_val;
+          curr_clust = curr_ent_val; // get next cluster
           curr_ent_val = fat_entry(disk, disk_size_bytes, curr_clust);
           outfile_clust_num++;
         }
         else {
-          /* printf("different entry val found: %d\n", curr_ent_val); return; */
+          printf("different entry val found: %X\n", curr_ent_val); return;
         }
       }
       return;
@@ -110,13 +94,17 @@ unsigned int fat_entry(char *disk, unsigned long disk_size_bytes, unsigned int c
 
   if (clust_num % 2 == 0) { // even entry number
     // low four bits in location 1+(3*n)/2 and the 8 bits in location (3*n)/2
-    entry = ((disk[fat_start_byte + 1 + (3*clust_num/2)] & 0x0F) << 8) | disk[fat_start_byte + (3*clust_num/2)];
+    unsigned int hi = ((disk[fat_start_byte + 1 + (3*clust_num/2)] & 0x0F) << 8);
+    unsigned int lo = disk[fat_start_byte + (3*clust_num/2)] & 0x0FF;
+    entry = hi | lo;
   }
   else {
     // the high four bits in location (3*n)/2 and the 8 bits in location 1+(3*n)/2
-    entry = ((disk[fat_start_byte + 1 + (3*clust_num/2)]) << 4) | ((disk[fat_start_byte + (3*clust_num/2)] & 0xF0) >> 4);
+    unsigned int hi = ((disk[fat_start_byte + 1 + (3*clust_num/2)]) << 4) & 0x0FF0;
+    unsigned int lo = ((disk[fat_start_byte + (3*clust_num/2)] & 0xF0) >> 4);
+    entry = hi | lo;
   }
-  /* printf("entry %d value: %X\n", clust_num, entry); */
+  entry = entry & 0x0FFF;
 
   return entry;
 }
@@ -156,13 +144,11 @@ unsigned int root_dir_f_size(char *disk, char *target_filename) {
       strncat(filename, fextension, strlen(fextension));
 
       if(strcmp(filename, target_filename) == 0) {
-        printf("file %s found!", target_filename);
         unsigned int byte1 = disk[entry_start_byte + 0x1c] & 0x00FF;
         unsigned int byte2 = disk[entry_start_byte + 0x1c + 1] & 0x00FF;
         unsigned int byte3 = disk[entry_start_byte + 0x1c + 2] & 0x00FF;
         unsigned int byte4 = disk[entry_start_byte + 0x1c + 3] & 0x00FF;
         unsigned long filesize = (byte4 << 24) | (byte3 << 16) | (byte2 << 8 ) | (byte1);
-        printf(" size: %d\n", filesize);
         return filesize;
       }
     }
