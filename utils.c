@@ -57,7 +57,7 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
   printf("fat1 start byte: %X\n", start_byte);
 
 
-  int b = 1; // start at 1 since ent 0,1 are bad
+  int b = 1; // start at 1 since ent 0,1 (block 1) are bad. 2 entries per block
   for(b; b < blocks_to_read; b++) {
     // read 2 entries
     int byte1_addr = start_byte + b*3;
@@ -65,18 +65,18 @@ unsigned int free_disk_size(char *disk, unsigned long disk_size_bytes) {
     printf("%X -> ", byte1_addr);
     int hi_nibble1 = ((disk[byte1_addr + 1] & 0x0f) << 8) & 0xf00;
     int low_byte = disk[byte1_addr] & 0x0ff;
-    int ent1 = hi_nibble1 | low_byte;
-    printf("entry: %X ", ent1);
+    int ent1 = (hi_nibble1 | low_byte) & 0x0FFF;
+    printf("high: %X, low: %X, entry: %X ", hi_nibble1, low_byte, ent1);
 
     if(ent1 == 0x00) { num_free_clust++; }
     else if(ent1 >= 0x002  && ent1 <= 0xFEF) { in_use_clust++; }
     else if(ent1 >= 0xFF8  && ent1 <= 0xFFF) { in_use_clust++; }
 
-
     int hi_byte2 = (disk[byte1_addr + 2] << 4) & 0x0fff;
     int low_nibble2 = (disk[byte1_addr + 1] & 0xf0) >> 4;
     int ent2 = hi_byte2 | low_nibble2;
-    printf("entry: %X \n", ent2);
+    printf("high: %X, low: %X, entry: %X\n", hi_byte2, low_nibble2, ent2);
+    /* printf("entry: %X \n", ent2); */
 
     if(ent2 == 0x00) { num_free_clust++; }
     else if(ent2 >= 0x002  && ent2 <= 0xFEF) { in_use_clust++; }
